@@ -42,3 +42,13 @@ Thumbs.db
 *.neo
 proms/
 toneosd/
+
+# clownassembler stuff
+clownassembler/build
+clownassembler/clownassembler
+clownassembler/clownassembler_asm68k
+clownassembler/clownassembler.exe
+clownassembler/syntactic.c
+clownassembler/syntactic.h
+clownassembler/lexical.c
+clownassembler/lexical.h
