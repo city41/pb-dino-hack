@@ -1,0 +1,24 @@
+[
+  {
+    "patchDescription": "Changes what the dino on the right side says in a one player game"
+  },
+  {
+    "type": "crom",
+    "description": "The speech bubble now saying 'ROM HAK'",
+    "imgFile": "dinoSpeechBubble_romHak.png",
+    "paletteFile": "dinoSpeechBubble_romHak_palette.png",
+    "destStartingIndex": "9c00"
+  },
+  {
+    "type": "prom",
+    "description": "the speech bubble tile indexes (first frame) in prom",
+    "address": "e2d0",
+    "patchAsm": ["dc.w $9c00", "dc.w $0000", "dc.w $9c01", "dc.w $0000"]
+  },
+  {
+    "type": "prom",
+    "description": "the speech bubble tile indexes (second frame) in prom",
+    "address": "e2f8",
+    "patchAsm": ["dc.w $9c00", "dc.w $0000", "dc.w $9c01", "dc.w $0000"]
+  }
+]
