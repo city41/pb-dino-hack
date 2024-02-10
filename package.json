@@ -1,0 +1,21 @@
+{
+  "name": "pb-dino-hack",
+  "version": "1.0.0",
+  "description": "A simple Neo Geo graphical Rom hack for Puzzle Bobble",
+  "main": "index.js",
+  "license": "MIT",
+  "scripts": {
+    "restore": "cp pbobblen.zip $MAME_ROM_DIR",
+    "mame": "mame -w -nofilter -nomouse aes pbobblen"
+  },
+  "dependencies": {
+    "@city41/sromcrom": "^0.14.2",
+    "@types/mkdirp": "^2.0.0",
+    "@types/node": "^20.11.17",
+    "execa": "^8.0.1",
+    "mkdirp": "^3.0.1",
+    "prettier": "^3.2.5",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  }
+}
