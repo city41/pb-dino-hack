@@ -280,8 +280,6 @@ async function main(patchJsonPaths: string[]) {
             parseInt(patch.destStartingIndex, 16),
             cromBuffers
           );
-
-          console.log("\n\n");
         } catch (e) {
           console.error(e);
         }

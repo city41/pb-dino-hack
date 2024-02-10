@@ -11,13 +11,13 @@
   },
   {
     "type": "prom",
-    "description": "the speech bubble tile indexes (first frame) in prom",
+    "description": "speech bubble tile indexes (first frame)",
     "address": "e2d0",
     "patchAsm": ["dc.w $9c00", "dc.w $0000", "dc.w $9c01", "dc.w $0000"]
   },
   {
     "type": "prom",
-    "description": "the speech bubble tile indexes (second frame) in prom",
+    "description": "speech bubble tile indexes (second frame)",
     "address": "e2f8",
     "patchAsm": ["dc.w $9c00", "dc.w $0000", "dc.w $9c01", "dc.w $0000"]
   }
