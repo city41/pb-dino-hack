@@ -17,6 +17,14 @@ import { doPromPatch } from "./doPromPatch";
 import { createCromBytes } from "./createCromBytes";
 import { insertIntoCrom } from "./insertIntoCrom";
 
+process.on("unhandledRejection", (reason) => {
+  console.log("unhandledRejection", reason);
+});
+
+process.on("uncaughtException", (e) => {
+  console.log("uncaughtException", e);
+});
+
 // Place subroutines starting at the very end of the prom and working
 // backwards from there
 const SUBROUTINE_STARTING_INSERT_END = 0x80000;
@@ -192,117 +200,123 @@ async function writePatchedZip(
 }
 
 async function main(patchJsonPaths: string[]) {
-  await fsp.rm(tmpDir, {
-    recursive: true,
-    force: true,
-    maxRetries: 5,
-    retryDelay: 1000,
-  });
-  await mkdirp(romTmpDir);
-  await mkdirp(asmTmpDir);
+  try {
+    await fsp.rm(tmpDir, {
+      recursive: true,
+      force: true,
+      maxRetries: 5,
+      retryDelay: 1000,
+    });
+    await mkdirp(romTmpDir);
+    await mkdirp(asmTmpDir);
 
-  const flippedPromBuffer = await getProm(path.resolve("./pbobblen.zip"));
-  const flippedPromData = Array.from(flippedPromBuffer);
-  const promData = flipBytes(flippedPromData);
+    const flippedPromBuffer = await getProm(path.resolve("./pbobblen.zip"));
+    const flippedPromData = Array.from(flippedPromBuffer);
+    const promData = flipBytes(flippedPromData);
 
-  let patchedPromData = [...promData];
+    let patchedPromData = [...promData];
 
-  let cromBuffers = [
-    await getCrom(path.resolve("./pbobblen.zip"), "068-c1.c1"),
-    await getCrom(path.resolve("./pbobblen.zip"), "068-c2.c2"),
-    await getCrom(path.resolve("./pbobblen.zip"), "068-c3.c3"),
-    await getCrom(path.resolve("./pbobblen.zip"), "068-c4.c4"),
-    await getCrom(path.resolve("./pbobblen.zip"), "d96-02.c5"),
-    await getCrom(path.resolve("./pbobblen.zip"), "d96-03.c6"),
-  ];
+    let cromBuffers = [
+      await getCrom(path.resolve("./pbobblen.zip"), "068-c1.c1"),
+      await getCrom(path.resolve("./pbobblen.zip"), "068-c2.c2"),
+      await getCrom(path.resolve("./pbobblen.zip"), "068-c3.c3"),
+      await getCrom(path.resolve("./pbobblen.zip"), "068-c4.c4"),
+      await getCrom(path.resolve("./pbobblen.zip"), "d96-02.c5"),
+      await getCrom(path.resolve("./pbobblen.zip"), "d96-03.c6"),
+    ];
 
-  let subroutineInsertEnd = SUBROUTINE_STARTING_INSERT_END;
+    let subroutineInsertEnd = SUBROUTINE_STARTING_INSERT_END;
 
-  for (const patchJsonPath of patchJsonPaths) {
-    const jsonDir = path.dirname(patchJsonPath);
-    console.log("Starting patch", patchJsonPath);
+    for (const patchJsonPath of patchJsonPaths) {
+      const jsonDir = path.dirname(patchJsonPath);
+      console.log("Starting patch", patchJsonPath);
 
-    let patchJson;
-    try {
-      patchJson = require(patchJsonPath);
-    } catch (e) {
-      console.error("Error occured loading the patch", e);
-    }
-
-    if (!isPatchJSON(patchJson)) {
-      console.error(
-        "The JSON at",
-        patchJsonPath,
-        ", is not a valid patch file"
-      );
-      usage();
-    }
-
-    console.log(patchJson.shift().patchDescription);
-
-    for (const patch of patchJson) {
-      if (patch.skip) {
-        console.log("SKIPPING!", patch.description);
-        continue;
+      let patchJson;
+      try {
+        patchJson = require(patchJsonPath);
+      } catch (e) {
+        console.error("Error occured loading the patch", e);
       }
 
-      if (patch.type === "prom") {
-        const result = await doPromPatch(
-          patchedPromData,
-          subroutineInsertEnd,
-          patch
+      if (!isPatchJSON(patchJson)) {
+        console.error(
+          "The JSON at",
+          patchJsonPath,
+          ", is not a valid patch file"
         );
-        patchedPromData = result.patchedPromData;
-        subroutineInsertEnd = result.subroutineInsertEnd;
-      } else if (patch.type === "crom") {
-        try {
-          console.log(patch.description);
-          console.log("creating crom bytes for", patch.imgFile);
-          const { oddCromBytes, evenCromBytes } = createCromBytes(
-            path.resolve(jsonDir, patch.imgFile),
-            path.resolve(jsonDir, patch.paletteFile)
-          );
-
-          const startingCromTileIndex = parseInt(patch.destStartingIndex, 16);
-          const tileIndexes: number[] = [];
-          const tileCount = oddCromBytes.length / 64;
-          for (let t = 0; t < tileCount; ++t) {
-            tileIndexes.push(startingCromTileIndex + t);
-          }
-
-          console.log(
-            "inserting crom data into croms at tile indexes:",
-            tileIndexes.map((ti) => ti.toString(16)).join(",")
-          );
-          cromBuffers = await insertIntoCrom(
-            oddCromBytes,
-            evenCromBytes,
-            parseInt(patch.destStartingIndex, 16),
-            cromBuffers
-          );
-        } catch (e) {
-          console.error(e);
-        }
-      } else {
-        throw new Error("unknown patch type: " + patch.type);
+        usage();
       }
 
-      console.log("\n\n");
+      console.log(patchJson.shift().patchDescription);
+
+      for (const patch of patchJson) {
+        if (patch.skip) {
+          console.log("SKIPPING!", patch.description);
+          continue;
+        }
+
+        if (patch.type === "prom") {
+          const result = await doPromPatch(
+            patchedPromData,
+            subroutineInsertEnd,
+            patch
+          );
+          patchedPromData = result.patchedPromData;
+          subroutineInsertEnd = result.subroutineInsertEnd;
+        } else if (patch.type === "crom") {
+          try {
+            console.log(patch.description);
+            console.log("creating crom bytes for", patch.imgFile);
+            const { oddCromBytes, evenCromBytes } = createCromBytes(
+              path.resolve(jsonDir, patch.imgFile),
+              path.resolve(jsonDir, patch.paletteFile)
+            );
+
+            const startingCromTileIndex = parseInt(patch.destStartingIndex, 16);
+            const tileIndexes: number[] = [];
+            const tileCount = oddCromBytes.length / 64;
+            for (let t = 0; t < tileCount; ++t) {
+              tileIndexes.push(startingCromTileIndex + t);
+            }
+
+            console.log(
+              "inserting crom data into croms at tile indexes:",
+              tileIndexes.map((ti) => ti.toString(16)).join(",")
+            );
+            cromBuffers = await insertIntoCrom(
+              oddCromBytes,
+              evenCromBytes,
+              parseInt(patch.destStartingIndex, 16),
+              cromBuffers
+            );
+          } catch (e) {
+            console.error(e);
+          }
+        } else {
+          throw new Error("unknown patch type: " + patch.type);
+        }
+
+        console.log("\n\n");
+      }
     }
+
+    const flippedBackPatch = flipBytes(patchedPromData);
+
+    const mameDir = process.env.MAME_ROM_DIR;
+
+    if (!mameDir?.trim()) {
+      throw new Error("MAME_ROM_DIR env variable is not set");
+    }
+
+    const writePath = path.resolve(mameDir, "pbobblen.zip");
+    await writePatchedZip(flippedBackPatch, cromBuffers, writePath);
+
+    console.log("wrote patched rom to", writePath);
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    const stack = e instanceof Error ? e.stack : "";
+    console.error("unexpected error", message, stack);
   }
-
-  const flippedBackPatch = flipBytes(patchedPromData);
-
-  const mameDir = process.env.MAME_ROM_DIR;
-
-  if (!mameDir?.trim()) {
-    throw new Error("MAME_ROM_DIR env variable is not set");
-  }
-
-  const writePath = path.resolve(mameDir, "pbobblen.zip");
-  await writePatchedZip(flippedBackPatch, cromBuffers, writePath);
-
-  console.log("wrote patched rom to", writePath);
 }
 
 const patchJsonInputPaths = process.argv.slice(2);
